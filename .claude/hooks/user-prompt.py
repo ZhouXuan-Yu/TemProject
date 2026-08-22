@@ -1,14 +1,9 @@
 #!/usr/bin/env python3
 
 import json
-import os
 import sys
-from datetime import datetime, timezone
-from pathlib import Path
 
-PROJECT_DIR = Path(os.environ.get("CLAUDE_PROJECT_DIR", Path.cwd()))
-RUNTIME_DIR = PROJECT_DIR / ".memory" / "runtime"
-CORRECTION_HINTS = ["不对", "不是", "我说过", "记住", "以后不要", "应该是", "之前说过"]
+from memory_engine import classify_prompt, record_candidate, retrieve
 
 
 def main() -> None:
@@ -21,20 +16,31 @@ def main() -> None:
     if not isinstance(prompt, str):
         prompt = str(prompt)
 
-    if prompt and any(hint in prompt for hint in CORRECTION_HINTS):
-        try:
-            RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
-            record = {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "type": "potential_correction",
-                "prompt": prompt[:4000],
-            }
-            with (RUNTIME_DIR / "corrections.jsonl").open("a", encoding="utf-8") as f:
-                f.write(json.dumps(record, ensure_ascii=False) + "\n")
-        except Exception:
-            pass
+    labels = classify_prompt(prompt)
+    record_candidate(
+        source="user_prompt",
+        text=prompt,
+        labels=labels,
+        extra={"session_id": payload.get("session_id")},
+    )
 
-    print(json.dumps({"continue": True}, ensure_ascii=False))
+    recalled = retrieve(prompt)
+    if recalled:
+        output = {
+            "hookSpecificOutput": {
+                "hookEventName": "UserPromptSubmit",
+                "additionalContext": (
+                    "# Relevant Project Memory\n\n"
+                    "The following content was retrieved from curated project memory. "
+                    "Use it as context, but prefer explicit current user instructions if they conflict.\n\n"
+                    + recalled
+                ),
+            }
+        }
+    else:
+        output = {"continue": True}
+
+    print(json.dumps(output, ensure_ascii=False))
 
 
 if __name__ == "__main__":
