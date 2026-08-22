@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
 
 import json
-import os
 import sys
-from datetime import datetime, timezone
-from pathlib import Path
 
-PROJECT_DIR = Path(os.environ.get("CLAUDE_PROJECT_DIR", Path.cwd()))
-RUNTIME_DIR = PROJECT_DIR / ".memory" / "runtime"
+from memory_engine import append_unique, record_candidate, sanitize, utc_now
+
+HIGH_VALUE_TOOLS = {
+    "Bash",
+    "Write",
+    "Edit",
+    "MultiEdit",
+    "NotebookEdit",
+    "mcp__github__create_or_update_file",
+}
 
 
 def main() -> None:
@@ -16,18 +21,30 @@ def main() -> None:
     except Exception:
         payload = {}
 
-    try:
-        RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
-        record = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "tool_name": payload.get("tool_name"),
-            "tool_input": payload.get("tool_input"),
-            "tool_response": payload.get("tool_response"),
-        }
-        with (RUNTIME_DIR / "observations.jsonl").open("a", encoding="utf-8") as f:
-            f.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
-    except Exception:
-        pass
+    tool_name = str(payload.get("tool_name") or "unknown")
+    tool_input = sanitize(payload.get("tool_input") or {})
+    tool_response = sanitize(payload.get("tool_response") or {})
+
+    record = {
+        "timestamp": utc_now(),
+        "tool_name": tool_name,
+        "tool_input": tool_input,
+        "tool_response": tool_response,
+        "session_id": payload.get("session_id"),
+    }
+    append_unique(
+        "observations.jsonl",
+        record,
+        [tool_name, tool_input, tool_response],
+    )
+
+    if tool_name in HIGH_VALUE_TOOLS:
+        record_candidate(
+            source="tool_result",
+            text=f"Tool: {tool_name}\nInput: {tool_input}\nResult: {tool_response}",
+            labels=["implementation_observation"],
+            extra={"session_id": payload.get("session_id")},
+        )
 
     print(json.dumps({"continue": True}, ensure_ascii=False))
 
