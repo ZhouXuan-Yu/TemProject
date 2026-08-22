@@ -3,7 +3,8 @@
 import json
 import sys
 
-from memory_engine import classify_prompt, record_candidate, retrieve
+from memory_engine import classify_prompt, record_candidate
+from memory_provider import get_provider
 
 
 def main() -> None:
@@ -24,7 +25,11 @@ def main() -> None:
         extra={"session_id": payload.get("session_id")},
     )
 
-    recalled = retrieve(prompt)
+    try:
+        recalled = get_provider().search(prompt, limit=4)
+    except Exception:
+        recalled = ""
+
     if recalled:
         output = {
             "hookSpecificOutput": {
