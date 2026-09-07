@@ -1,0 +1,28 @@
+name: Agent Infrastructure
+
+on:
+  push:
+    paths:
+      - '.claude/**'
+      - '.memory/**'
+      - 'tests/agent/**'
+      - '.github/workflows/agent-infra.yml'
+  pull_request:
+    paths:
+      - '.claude/**'
+      - '.memory/**'
+      - 'tests/agent/**'
+      - '.github/workflows/agent-infra.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile hook code
+        run: python -m compileall -q .claude/hooks tests/agent
+      - name: Run agent infrastructure tests
+        run: python -m unittest discover -s tests/agent -p 'test_*.py'
