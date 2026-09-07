@@ -5,6 +5,9 @@ CLAUDE.local.md
 # Runtime Agent Memory
 .memory/runtime/
 
+# Local codebase-memory-mcp index
+.codebase-memory/
+
 # Secrets
 .env
 .env.*
