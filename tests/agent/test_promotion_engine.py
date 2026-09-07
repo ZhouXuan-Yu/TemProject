@@ -26,10 +26,10 @@ class PromotionEngineTest(unittest.TestCase):
         runtime_dir.mkdir(parents=True)
         archive_dir.mkdir(parents=True)
 
-        (memory_dir / "MEMORY.md").write_text("# Current\nDatabase is MySQL.\n", encoding="utf-8")
+        (memory_dir / "MEMORY.md").write_text("# Current\n数据库当前采用 MySQL。\n", encoding="utf-8")
         (memory_dir / "TASKS.md").write_text("# Tasks\n", encoding="utf-8")
         (memory_dir / "LEARNING.md").write_text("# Learnings\n", encoding="utf-8")
-        (memory_dir / "DECISIONS.md").write_text("# Decisions\nADR-001: MySQL\n", encoding="utf-8")
+        (memory_dir / "DECISIONS.md").write_text("# Decisions\nADR-001: 数据库采用 MySQL。\n", encoding="utf-8")
         (root / "docs" / "ARCHITECTURE.md").write_text("# Architecture\n", encoding="utf-8")
         (wiki / "README.md").write_text("# Wiki\n", encoding="utf-8")
         (memory_dir / "config.json").write_text(
