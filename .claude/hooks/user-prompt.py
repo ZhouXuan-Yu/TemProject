@@ -3,8 +3,7 @@
 import json
 import sys
 
-from memory_engine import classify_prompt, record_candidate
-from memory_provider import get_provider
+from memory_engine import classify_prompt, is_high_signal, load_config, record_candidate, retrieve
 
 
 def main() -> None:
@@ -18,17 +17,27 @@ def main() -> None:
         prompt = str(prompt)
 
     labels = classify_prompt(prompt)
-    record_candidate(
-        source="user_prompt",
-        text=prompt,
-        labels=labels,
-        extra={"session_id": payload.get("session_id")},
-    )
+    if is_high_signal(labels):
+        record_candidate(
+            source="user_prompt",
+            text=prompt,
+            labels=labels,
+            extra={"session_id": payload.get("session_id")},
+        )
 
-    try:
-        recalled = get_provider().search(prompt, limit=4)
-    except Exception:
-        recalled = ""
+    config = load_config()
+    retrieval = config.get("retrieval") if isinstance(config.get("retrieval"), dict) else {}
+    recalled = ""
+    if retrieval.get("enabled", True):
+        try:
+            recalled = retrieve(
+                prompt,
+                limit=int(retrieval.get("max_results", 2)),
+                max_chars=int(retrieval.get("max_chars", 2500)),
+                min_score=int(retrieval.get("min_token_overlap", 2)),
+            )
+        except Exception:
+            recalled = ""
 
     if recalled:
         output = {
@@ -36,8 +45,7 @@ def main() -> None:
                 "hookEventName": "UserPromptSubmit",
                 "additionalContext": (
                     "# Relevant Project Memory\n\n"
-                    "The following content was retrieved from curated project memory. "
-                    "Use it as context, but prefer explicit current user instructions if they conflict.\n\n"
+                    "Use this reviewed project context only when relevant; current user instructions win on conflict.\n\n"
                     + recalled
                 ),
             }
