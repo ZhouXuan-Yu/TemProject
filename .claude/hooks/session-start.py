@@ -9,52 +9,34 @@ PROJECT_DIR = Path(os.environ.get("CLAUDE_PROJECT_DIR", Path.cwd()))
 MEMORY_DIR = PROJECT_DIR / ".memory"
 
 
-def read_file(path: Path, max_chars: int = 12000) -> str:
-    if not path.exists():
-        return ""
+def read_file(path: Path, max_chars: int) -> str:
     try:
         text = path.read_text(encoding="utf-8")
     except Exception:
         return ""
-    if len(text) > max_chars:
-        return text[:max_chars] + "\n...[truncated]"
-    return text
+    return text if len(text) <= max_chars else text[:max_chars] + "\n...[truncated]"
 
 
 def main() -> None:
     try:
-        _hook_input = json.load(sys.stdin)
+        json.load(sys.stdin)
     except Exception:
-        _hook_input = {}
+        pass
 
-    memory = read_file(MEMORY_DIR / "MEMORY.md")
-    tasks = read_file(MEMORY_DIR / "TASKS.md")
-
-    context = f"""# PROJECT RUNTIME CONTEXT
-
-## Current Project State
-
-{memory}
-
-## Active Tasks
-
-{tasks}
-
-## Runtime Instructions
-
-- Treat MEMORY.md as current state, not immutable truth.
-- Treat DECISIONS.md as historical accepted decisions.
-- Do not overwrite curated memory because of assumptions.
-- Consult relevant wiki and architecture documents before significant changes.
-"""
-
-    output = {
-        "hookSpecificOutput": {
-            "hookEventName": "SessionStart",
-            "additionalContext": context,
-        }
-    }
-    print(json.dumps(output, ensure_ascii=False))
+    memory = read_file(MEMORY_DIR / "MEMORY.md", 3200)
+    tasks = read_file(MEMORY_DIR / "TASKS.md", 2200)
+    context = (
+        "# PROJECT RUNTIME CONTEXT\n\n"
+        "## Current State\n\n" + memory + "\n\n"
+        "## Active Work\n\n" + tasks + "\n\n"
+        "Use curated project records as context. Current user instructions and current source code take precedence on conflict."
+    )
+    print(
+        json.dumps(
+            {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": context}},
+            ensure_ascii=False,
+        )
+    )
 
 
 if __name__ == "__main__":
