@@ -4,16 +4,16 @@
 
 ## Project Phase
 
-Claude Code agent infrastructure v1 implementation.
+Claude Code agent infrastructure v1 + codebase intelligence integration.
 
 ## Current Objective
 
-Validate the Hook lifecycle locally, then connect the intended external semantic-memory provider through the provider adapter.
+Validate the Hook lifecycle and `codebase-memory-mcp` connection in a real local Claude Code session, then implement candidate-to-curated-memory promotion.
 
 ## Completed
 
 - Project memory architecture defined.
-- CLAUDE.md initialized.
+- CLAUDE.md initialized and updated with code-intelligence protocol.
 - Project rule files created.
 - Claude Code Hook configuration created.
 - SessionStart loads current project state and active tasks.
@@ -26,31 +26,41 @@ Validate the Hook lifecycle locally, then connect the intended external semantic
 - Secret/token redaction implemented.
 - Memory provider abstraction implemented with local fallback.
 - Memory engine policy documented in `.memory/config.json` and `.memory/README.md`.
+- `codebase-memory-mcp` identified as the structural code-intelligence MCP.
+- Project-level `.mcp.json` created using the `codebase-memory-mcp` executable from PATH.
+- `.claude/rules/code-intelligence.md` created.
+- `docs/CODEBASE_MEMORY_MCP.md` created.
+- Local `.codebase-memory/` indexes are ignored by Git.
+- ADR-002 records the separation between curated project memory, code graph memory, and source-code truth.
 
 ## In Progress
 
 - Local Claude Code runtime validation
-- External semantic-memory provider identification and integration
+- Local installation/availability of `codebase-memory-mcp`
+- Code graph indexing validation
 - Candidate-to-curated-memory promotion workflow
 
 ## Current Blockers
 
-- The exact `cobase-memory` / `cobase-memeroy` project intended for integration has not yet been identified. Public search results for `cobase` point to an unrelated JavaScript data-storage package, so no external provider has been wired yet.
+- Runtime verification requires the local development machine to have the `codebase-memory-mcp` executable installed and available on PATH.
+- Hook behavior still needs to be validated against the locally installed Claude Code version.
 
 ## Recently Confirmed
 
-- Curated Markdown remains the source of truth.
+- `codebase-memory-mcp` is used for structural code discovery, call chains, routes, dependencies, and impact analysis.
+- Curated Markdown remains the source of truth for project state, decisions, lessons, and business/domain knowledge.
+- Current source files remain the final source of truth for exact implementation.
+- MCP failure must not block normal development.
 - Runtime observations are not authoritative memory.
-- External semantic memory is a retrieval layer, not a replacement for project truth.
-- Hooks must fall back safely if an external memory provider is unavailable.
 - Curated Markdown must not be silently rewritten from raw tool observations.
 
 ## Next
 
 1. Pull the repository locally.
-2. Start Claude Code inside the repository.
-3. Validate SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, PreCompact, Stop and SessionEnd payloads.
-4. Confirm `.memory/runtime/` files are generated and ignored by Git.
-5. Test a safe destructive-command simulation and confirm PreToolUse blocking behavior.
-6. Provide or identify the exact external memory repository/provider.
-7. Implement its provider adapter and semantic retrieval.
+2. Install `codebase-memory-mcp` and ensure the executable is available on PATH.
+3. Start Claude Code inside the repository and run `/mcp`.
+4. Confirm `codebase-memory-mcp` is connected and exposes its code-intelligence tools.
+5. Index the repository and test structural queries.
+6. Validate SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, PreCompact, Stop and SessionEnd payloads.
+7. Confirm `.memory/runtime/` files are generated and ignored by Git.
+8. Implement reviewed candidate-to-curated-memory promotion and superseded-decision handling.
