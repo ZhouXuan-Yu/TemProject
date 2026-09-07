@@ -1,134 +1,90 @@
 # Agent Engineering Research Ledger
 
-This document records external research that materially influences the project's Agent architecture. It is intentionally concise: the goal is to preserve design rationale, not mirror external documentation.
+Record only ecosystem research that materially changes this project's Agent architecture. The goal is design rationale, not a mirror of upstream documentation.
 
 ## Research Policy
 
-For foundational Agent changes, review current official documentation and active GitHub projects before implementation. Evaluate maintenance activity, adoption, architecture, license, operational fit, and failure modes. Stars/forks are signals only.
-
-Record:
-
-- research date and topic
-- upstream projects reviewed
-- mainstream patterns observed
-- what this project adopts
-- what this project rejects or postpones
-- why
+For foundational Agent changes, check current official documentation and active GitHub repositories. Prefer upstream projects and current implementation evidence; treat popularity as an adoption signal, not proof. Record what is adopted, rejected, or postponed and why.
 
 ---
 
-## 2026-09-07 — Agent Memory, Context Engineering, and Coding-Agent Architecture
+## 2026-09-07 — Memory, Context Engineering, and Coding-Agent Architecture
 
 ### Projects reviewed
 
-#### anthropics/claude-code
+- `anthropics/claude-code` — primary host/runtime; project instructions, hooks, MCP, tools.
+- `humanlayer/12-factor-agents` — explicit ownership of context composition.
+- `langchain-ai/langgraph` — durable/thread state separated from longer-lived memory.
+- `langchain-ai/langmem` — hot-path memory plus later consolidation.
+- `mem0ai/mem0` — production-oriented persistent memory lifecycle.
+- `letta-ai/letta` — stateful Agents with first-class persistent memory.
+- `OpenHands/software-agent-sdk` — modular coding-Agent runtime/workspace separation.
+- `SWE-agent/SWE-agent` — constrained issue-to-patch coding workflows.
+- `coleam00/claude-memory-compiler` — Claude Code session capture followed by later memory compilation.
+- `0ctacity/codebase-memory-mcp` — graph/vector/full-text structural code intelligence through MCP.
 
-Role in landscape: primary host/runtime for this project. Relevant patterns include project instructions, hooks, MCP integration, tool execution, and codebase-aware terminal workflows.
+### Adopted
 
-Repository: https://github.com/anthropics/claude-code
+- Explicit separation between runtime context, durable project truth, structural code intelligence, and current source.
+- Append/review promotion rather than automatic LLM rewriting of authoritative Markdown.
+- Supersession links instead of destructive historical replacement.
+- Optional MCP acceleration with source verification and fail-open fallback.
 
-#### humanlayer/12-factor-agents
+### Rejected/postponed
 
-Role in landscape: production-oriented Agent engineering principles. A central pattern is explicit ownership of the context window: prompts, RAG, tool history, state, and memory are deliberately composed rather than treated as one undifferentiated transcript.
+- Vector DB as project source of truth.
+- Automatic conflict resolution.
+- Automatic per-turn rewriting of MEMORY/WIKI/DECISIONS.
+- Treating codebase-memory-mcp as authoritative.
 
-Repository: https://github.com/humanlayer/12-factor-agents
+---
 
-#### langchain-ai/langgraph
+## 2026-09-07 — Final Runtime Weight, Observability, and Evaluation
 
-Role in landscape: durable Agent orchestration. Its architecture separates thread/checkpoint state from longer-lived memory and emphasizes resumable/durable execution.
+### GitHub projects and official implementation reviewed
 
-Repository: https://github.com/langchain-ai/langgraph
-
-#### langchain-ai/langmem
-
-Role in landscape: Agent memory management. Relevant pattern: memory can be managed in the hot path while extraction/consolidation can also run as a background process rather than blocking every Agent turn.
-
-Repository: https://github.com/langchain-ai/langmem
-
-#### mem0ai/mem0
-
-Role in landscape: production-oriented memory layer. Relevant direction: additive fact capture, temporal metadata, entity-aware/multi-signal retrieval, and explicit memory lifecycle rather than a single mutable summary blob.
-
-Repository: https://github.com/mem0ai/mem0
-
-#### letta-ai/letta
-
-Role in landscape: stateful Agents with persistent memory and identity. Relevant pattern: Agent state and memory are first-class platform concerns, not just prompt text.
-
-Repository: https://github.com/letta-ai/letta
-
-#### OpenHands/software-agent-sdk and OpenHands
-
-Role in landscape: modular software-engineering Agent runtime. Relevant direction: separate Agent logic from workspaces/execution infrastructure and support durable/isolated environments.
-
-Repositories:
-- https://github.com/OpenHands/software-agent-sdk
-- https://github.com/OpenHands/OpenHands
-
-#### SWE-agent/SWE-agent
-
-Role in landscape: issue-to-patch software engineering Agent. Useful as a reference for constrained coding workflows and executable task environments.
-
-Repository: https://github.com/SWE-agent/SWE-agent
-
-#### coleam00/claude-memory-compiler
-
-Role in landscape: Claude Code-specific memory compilation. It uses hooks to capture sessions and a later compilation/extraction phase to organize decisions and lessons into structured knowledge instead of writing every raw event directly into long-term memory.
-
-Repository: https://github.com/coleam00/claude-memory-compiler
-
-#### 0ctacity/codebase-memory-mcp
-
-Role in landscape: persistent structural code intelligence through MCP, including graph/vector/full-text/cross-repository search. It is new and therefore remains an optional acceleration layer, never a project source of truth.
-
-Repository: https://github.com/0ctacity/codebase-memory-mcp
+- `anthropics/claude-code` — current Hook examples confirm matcher expressions such as `Edit|Write|MultiEdit|NotebookEdit`; current Hook schema supports `permissionDecision: allow|deny|ask`.
+- `langfuse/langfuse` — active open-source AI engineering platform covering observability, evals, datasets, metrics, and OpenTelemetry integration.
+- `Arize-ai/phoenix` — active AI observability and evaluation platform.
+- `openlit/openlit` — OpenTelemetry-native AI observability/evaluation platform.
+- `confident-ai/deepeval` — dedicated LLM evaluation framework.
+- `promptfoo/promptfoo` — prompt/Agent/RAG evaluation, CI/CD, red-team and vulnerability testing.
 
 ### Mainstream patterns observed
 
-1. **Context engineering is explicit.** Current state, retrieved knowledge, tool history, instructions, and long-term memory should have distinct responsibilities.
-2. **Short-lived execution state and durable memory are separate.** Session/thread checkpoints are not the same thing as cross-session knowledge.
-3. **Long-term memory benefits from consolidation.** Raw events are captured first; higher-quality knowledge is extracted or promoted later.
-4. **Authoritative memory should not be silently destructively rewritten.** Additive history, temporal metadata, review, and supersession are safer for production systems.
-5. **Human review remains valuable for consequential truth.** Architecture decisions, business facts, and corrections should have an auditable approval path.
-6. **Coding Agents increasingly separate reasoning from execution/workspaces.** Code intelligence and isolated workspaces are supporting services rather than the sole Agent brain.
-7. **MCP/tool boundaries should be optional and replaceable.** External intelligence services must fail safely without preventing ordinary repository work.
+1. Production Agent/LLM observability is increasingly treated as a dedicated tracing/evaluation concern rather than hand-written logs inside business code.
+2. Interoperable/OpenTelemetry-compatible tracing is a strong integration direction in current observability platforms.
+3. Evaluation and red-team tooling is most useful when there is an owned model/prompt/Agent runtime plus datasets or repeatable scenarios.
+4. Coding-Agent host hooks should stay narrowly matched and deterministic; they should not become a second application platform by default.
+5. Deterministic CI tests are still the appropriate first evaluation layer for infrastructure whose behavior can be asserted without calling an LLM.
 
-### Adopted for TemProject
+### Audit findings in TemProject v2
 
-- Keep curated Markdown as reviewed project truth.
-- Keep runtime observations/candidates append-oriented and non-authoritative.
-- Build a derived Promotion Queue instead of letting hooks rewrite curated truth directly.
-- Add confidence/priority scoring only as triage signals, not as automatic authority.
-- Mark possible conflicts and require review rather than asking a heuristic classifier to resolve them automatically.
-- Represent replacement decisions with explicit supersession links; preserve historical records.
-- Build review decisions as an append-only audit trail.
-- Continue using `codebase-memory-mcp` only for structural code intelligence, with source files as exact implementation truth.
-- Preserve a provider boundary so later semantic memory systems can be swapped in.
+- `CLAUDE.md` duplicated detailed Research-First and Code-Intelligence rules already stored under `.claude/rules/`.
+- UserPromptSubmit stored every ordinary prompt as a candidate even though observations never reached promotion.
+- PostToolUse ran for all tools, persisted large input/response payloads, and duplicated high-value tool results into candidates that typically scored below the promotion threshold.
+- Candidate dedupe rewrote a large global `seen.json` on ordinary tool observations.
+- Stop rebuilt the promotion queue by rereading the entire candidate file each turn.
+- PreCompact and SessionEnd logs had no downstream consumer.
+- `memory_provider.py` had one real implementation and no current external backend.
+- v2 config contained policy fields not consumed by code.
+- PreToolUse said some actions required approval but always returned `deny`, making approval impossible.
 
-### Rejected or postponed
+### Adopted for v3
 
-- **Automatic LLM rewriting of MEMORY/WIKI/DECISIONS on every turn:** rejected because it creates silent truth drift and weak auditability.
-- **Using a vector database as the only source of truth:** rejected; retrieval storage and authoritative project records have different responsibilities.
-- **Treating codebase-memory-mcp as authoritative:** rejected; its index may be stale and it is a relatively new dependency.
-- **Automatic conflict resolution:** postponed until we have evaluation data. Initial implementation only marks possible conflicts.
-- **Automatic application of approved candidates to curated Markdown:** postponed until the review queue is validated locally. Approval and application remain separate operations in v1.
+- Compact `CLAUDE.md`; detailed rules remain in specialized files.
+- High-signal-only candidate capture.
+- PostToolUse matcher narrowed to state-changing tool classes.
+- Tool observations store path/command/status/error summaries, not edit/write bodies.
+- No tool-result memory candidates.
+- Small candidate-only dedupe cache.
+- Incremental promotion cursor.
+- Bounded retrieval: two results and a small context budget with a relevance floor.
+- Remove unused provider and lifecycle logging hooks.
+- Tiered safety: catastrophic `deny`, recoverable high-risk `ask`.
+- On-demand local doctor + deterministic GitHub Actions tests.
+- No Langfuse/Phoenix/OpenLIT/DeepEval/Promptfoo dependency in the baseline template.
 
-### Resulting design
+### Deferred trigger
 
-```text
-Runtime Events
-    ↓ append
-candidates.jsonl
-    ↓ deterministic scoring/classification
-Promotion Queue
-    ↓ human/agent review action
-promotion-decisions.jsonl
-    ↓ explicit application only
-Curated Truth
-(MEMORY / TASKS / LEARNING / DECISIONS / WIKI)
-
-Old truth is not silently deleted:
-new record ──supersedes──> old record
-```
-
-This research snapshot should be revisited before major changes to the Agent platform rather than treated as permanently current.
+Revisit production tracing/evaluation only when a concrete project embeds its own model/Agent runtime, has real trace/eval requirements, or accumulated failure cases that deterministic infrastructure tests cannot cover.
