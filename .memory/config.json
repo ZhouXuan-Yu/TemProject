@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "provider": "local",
   "retrieval": {
     "enabled": true,
@@ -12,10 +12,21 @@
     "dedupe_cache_size": 5000
   },
   "promotion": {
+    "mode": "reviewed",
     "auto_write_curated_markdown": false,
-    "require_review_for_decisions": true,
-    "require_review_for_wiki": true,
-    "corrections_are_high_priority": true
+    "build_queue_on_stop": true,
+    "min_queue_confidence": 0.45,
+    "require_review_for": [
+      "memory",
+      "tasks",
+      "learning",
+      "decisions",
+      "wiki"
+    ],
+    "corrections_are_high_priority": true,
+    "conflict_policy": "mark_possible_conflict_and_require_review",
+    "history_policy": "append_only_candidates_and_review_decisions",
+    "supersede_policy": "link_not_delete"
   },
   "security": {
     "redact_secrets": true,
