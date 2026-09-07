@@ -1,35 +1,20 @@
 {
-  "version": 2,
-  "provider": "local",
+  "version": 3,
   "retrieval": {
     "enabled": true,
-    "max_results": 4,
-    "max_chars": 6000
+    "max_results": 2,
+    "max_chars": 2500,
+    "min_token_overlap": 2
   },
   "runtime": {
-    "max_record_chars": 12000,
-    "max_file_bytes": 2097152,
-    "dedupe_cache_size": 5000
+    "max_record_chars": 4000,
+    "max_observation_chars": 1600,
+    "max_file_bytes": 1048576,
+    "dedupe_cache_size": 512
   },
   "promotion": {
-    "mode": "reviewed",
-    "auto_write_curated_markdown": false,
     "build_queue_on_stop": true,
-    "min_queue_confidence": 0.45,
-    "require_review_for": [
-      "memory",
-      "tasks",
-      "learning",
-      "decisions",
-      "wiki"
-    ],
-    "corrections_are_high_priority": true,
-    "conflict_policy": "mark_possible_conflict_and_require_review",
-    "history_policy": "append_only_candidates_and_review_decisions",
-    "supersede_policy": "link_not_delete"
-  },
-  "security": {
-    "redact_secrets": true,
-    "store_full_tool_responses": false
+    "batch_size": 25,
+    "min_queue_confidence": 0.45
   }
 }
