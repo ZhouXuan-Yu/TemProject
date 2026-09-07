@@ -29,6 +29,15 @@ def main() -> None:
     except Exception:
         pass
 
+    # Promotion queue generation is a derived, fail-open operation. It never
+    # modifies curated Markdown and must not block normal Claude Code usage.
+    try:
+        from promotion_engine import build_review_queue
+
+        build_review_queue(limit=50)
+    except Exception:
+        pass
+
     print(json.dumps({"continue": True}, ensure_ascii=False))
 
 
