@@ -17,9 +17,10 @@ Before implementing a task:
 3. Read `.memory/MEMORY.md`.
 4. Read `.memory/TASKS.md`.
 5. Consult relevant `.memory/DECISIONS.md`, `.memory/LEARNING.md`, `docs/wiki/`, and `docs/ARCHITECTURE.md`.
-6. For structural code discovery, prefer `codebase-memory-mcp` when available.
-7. Verify exact implementation details in current source files before editing.
-8. Prefer existing architecture and components over introducing new patterns.
+6. For foundational Agent/platform changes, follow the Research-First Protocol before designing.
+7. For structural code discovery, prefer `codebase-memory-mcp` when available.
+8. Verify exact implementation details in current source files before editing.
+9. Prefer existing architecture and components over introducing new patterns.
 
 Do not start coding based purely on assumptions.
 
@@ -35,7 +36,27 @@ Do not start coding based purely on assumptions.
 - Do not silently modify database schemas.
 - Do not upgrade major dependencies without approval.
 
-## 4. Architecture
+## 4. Research-First Protocol
+
+Material changes to Agent architecture, memory, context engineering, RAG, MCP, orchestration, workflow engines, tool/model routing, permissions, security, observability, evaluation, deployment, or foundational dependencies must begin with current ecosystem research.
+
+Before designing such a change:
+
+1. Review current official documentation and active GitHub repositories.
+2. Prefer upstream/official, actively maintained, production-oriented projects as reference points.
+3. Treat stars/forks as adoption signals only, not proof of correctness.
+4. Compare the mainstream pattern with this project's constraints.
+5. Record meaningful findings in `docs/AGENT_RESEARCH.md`.
+6. Record what is adopted, rejected, or postponed and why.
+7. Check license, security, maintenance, and compatibility before reusing external code or dependencies.
+
+Do not perform architecture-by-memory when current external verification is practical.
+
+This protocol is mandatory for Agent-platform evolution, but not for trivial localized fixes that do not change architecture.
+
+See `.claude/rules/research-first.md`.
+
+## 5. Architecture
 
 Architecture source of truth: `docs/ARCHITECTURE.md`.
 
@@ -45,9 +66,11 @@ Historical technical decisions: `.memory/DECISIONS.md`.
 
 Structural code relationships: `codebase-memory-mcp` when available.
 
+External Agent research rationale: `docs/AGENT_RESEARCH.md`.
+
 If implementation conflicts with these documents, investigate before changing the architecture.
 
-## 5. Code Intelligence Protocol
+## 6. Code Intelligence Protocol
 
 Use information sources according to their responsibility:
 
@@ -55,6 +78,7 @@ Use information sources according to their responsibility:
 - `.memory/DECISIONS.md` — accepted technical and business decisions.
 - `docs/wiki/` — stable business and domain facts.
 - `docs/ARCHITECTURE.md` — intended architecture and system boundaries.
+- `docs/AGENT_RESEARCH.md` — external ecosystem research and adoption rationale.
 - `codebase-memory-mcp` — current structural code graph, symbols, call chains, routes, dependencies, and impact analysis.
 - source files — exact implementation truth.
 
@@ -71,7 +95,7 @@ MCP failure must not block development. Fall back to standard repository inspect
 
 See `docs/CODEBASE_MEMORY_MCP.md` and `.claude/rules/code-intelligence.md`.
 
-## 6. Memory Protocol
+## 7. Memory Protocol
 
 ### MEMORY.md
 
@@ -93,7 +117,13 @@ Contains accepted technical or business decisions. Update when an important deci
 
 Contains stable project facts. Do not put temporary session information in the wiki.
 
-## 7. Definition of Done
+### Runtime Candidates
+
+Runtime candidates are evidence, not truth. They may be scored and queued for review but must not silently overwrite curated Markdown.
+
+Corrections and new decisions should preserve history through explicit supersession links rather than destructive deletion.
+
+## 8. Definition of Done
 
 Before declaring a coding task complete:
 
@@ -104,9 +134,10 @@ Before declaring a coding task complete:
 - no unrelated code was modified
 - no credentials or secrets were introduced
 - structural impact was checked for shared or high-risk code when appropriate
+- required research was recorded for material Agent-platform changes
 - memory state is updated when appropriate
 
-## 8. Safety
+## 9. Safety
 
 Never:
 
