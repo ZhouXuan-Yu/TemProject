@@ -5,7 +5,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session-start.py\""
+            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session-start.py\"",
+            "timeout": 3
           }
         ]
       }
@@ -15,7 +16,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/user-prompt.py\""
+            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/user-prompt.py\"",
+            "timeout": 3
           }
         ]
       }
@@ -26,17 +28,20 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre-tool.py\""
+            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre-tool.py\"",
+            "timeout": 3
           }
         ]
       }
     ],
     "PostToolUse": [
       {
+        "matcher": "Bash|Write|Edit|MultiEdit|NotebookEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/post-tool.py\""
+            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/post-tool.py\"",
+            "timeout": 3
           }
         ]
       }
@@ -46,28 +51,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/stop.py\""
-          }
-        ]
-      }
-    ],
-    "PreCompact": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pre-compact.py\""
-          }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/session-end.py\"",
-            "timeout": 5
+            "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/stop.py\"",
+            "timeout": 3
           }
         ]
       }
