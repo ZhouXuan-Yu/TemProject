@@ -22,6 +22,7 @@ Final local acceptance of Agent infrastructure v3.
 - [x] `memoryctl.py doctor` added.
 - [x] GitHub Actions Agent-infra regression workflow added.
 - [x] Isolated compile + 10 unit/integration tests pass.
+- [x] Remote GitHub Actions compile + Agent-infrastructure test job pass.
 - [ ] Pull final version on local development machine.
 - [ ] Run the test suite locally.
 - [ ] Run `memoryctl.py doctor` locally.
