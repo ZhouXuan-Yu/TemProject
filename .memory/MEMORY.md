@@ -29,12 +29,12 @@ Run the final v3 locally inside Claude Code, verify Hook payloads and `codebase-
 - On-demand `memoryctl.py doctor` added; no external observability service is required by default.
 - GitHub Actions regression workflow added with Python compile + unit tests.
 - Final isolated regression suite: 10 tests passed on 2026-09-07.
+- First GitHub Actions `Agent Infrastructure` run completed successfully on the final code/test set.
 
 ## Current Blockers
 
 - Local Claude Code Hook behavior still needs verification against the user's installed Claude Code version.
 - `codebase-memory-mcp` must be installed and available on PATH for structural-intelligence tests; its absence does not block normal development.
-- GitHub Actions workflow is configured but its first remote run must occur after the final push.
 
 ## Confirmed Boundaries
 
