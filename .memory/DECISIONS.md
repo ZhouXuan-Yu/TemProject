@@ -4,144 +4,74 @@
 
 ## ADR-001 Agent Memory Architecture
 
-**Status:** Accepted
-
+**Status:** Accepted  
 **Date:** 2026-08-22
 
-### Context
-
-The project requires long-term AI-assisted development across many Claude Code sessions.
-
-### Decision
-
-Separate persistent agent information into:
-
-- CLAUDE.md — working principles
-- MEMORY.md — current state
-- TASKS.md — active work
-- LEARNING.md — reusable lessons
-- DECISIONS.md — accepted decisions
-- Wiki — stable knowledge
-- ARCHITECTURE.md — system architecture
-
-### Reason
-
-Different categories have different lifecycles and should not be mixed into a single memory file.
-
-### Consequences
-
-Hooks and external memory systems should classify information before writing it.
+Separate persistent Agent information into `CLAUDE.md`, current state, tasks, lessons, decisions, stable wiki knowledge, and architecture documentation. Different information lifecycles must not be mixed into one memory blob.
 
 ---
 
 ## ADR-002 Codebase Intelligence via codebase-memory-mcp
 
-**Status:** Accepted
-
+**Status:** Accepted  
 **Date:** 2026-09-07
 
-### Context
-
-Large commercial projects require efficient structural code discovery across functions, classes, call chains, routes, dependencies, and module boundaries. Markdown project memory is not suitable for continuously representing the live repository structure.
-
-### Decision
-
-Use `codebase-memory-mcp` as the optional structural code-intelligence layer for Claude Code.
-
-Responsibilities are separated as follows:
-
-- curated Markdown memory stores project state, accepted decisions, reusable lessons, and stable domain knowledge
-- `codebase-memory-mcp` stores and queries structural code relationships
-- current source files remain the final source of truth for exact implementation
-
-### Constraints
-
-- MCP availability must not become a hard dependency for development.
-- Stale graph results must not override current source code.
-- Local `.codebase-memory/` indexes are not committed by default.
-- Machine-specific binary paths must not be committed to the shared project configuration.
-
-### Consequences
-
-Claude should prefer codebase-memory-mcp for structural discovery and impact analysis, then verify relevant source files before editing.
+Use `codebase-memory-mcp` as an optional structural code-intelligence layer for symbols, call chains, routes, dependencies, impact analysis, graph/vector/full-text search. Curated Markdown stores project/domain truth and current source files remain exact implementation truth. MCP failure or stale indexes must not block normal development or override source.
 
 ---
 
 ## ADR-003 Research-First Agent Engineering
 
-**Status:** Accepted
-
+**Status:** Accepted  
 **Date:** 2026-09-07
 
-### Context
-
-The Agent ecosystem changes quickly. Memory, context engineering, MCP, orchestration, evaluation, workspaces, and coding-agent patterns can materially evolve within months. Designing these layers only from prior experience risks rebuilding solved problems or following stale practices.
-
-### Decision
-
-Material Agent-platform changes must begin with current official documentation and GitHub ecosystem research.
-
-Research is recorded in `docs/AGENT_RESEARCH.md` and should capture:
-
-- upstream projects reviewed
-- mainstream patterns observed
-- what is adopted
-- what is rejected or postponed
-- project-specific reasons
-
-### Constraints
-
-- Stars/forks are adoption signals, not proof of technical correctness.
-- External code must not be copied without license/security/compatibility review.
-- Research is mandatory for foundational Agent architecture changes, not trivial localized fixes.
-- Current project constraints may justify deviations, but the reason must be explicit.
-
-### Consequences
-
-Agent architecture decisions become traceable to current ecosystem evidence rather than relying only on model memory or individual preference.
+Material Agent-platform changes must begin with current official documentation and active GitHub research. Record meaningful upstream references, adopted patterns, rejected/postponed alternatives, and project-specific reasons in `docs/AGENT_RESEARCH.md`.
 
 ---
 
 ## ADR-004 Reviewed Append-Oriented Memory Promotion
 
-**Status:** Accepted
+**Status:** Accepted  
+**Date:** 2026-09-07
 
+Runtime evidence does not directly rewrite curated truth. High-signal candidates enter a reviewed promotion pipeline with deterministic triage, possible conflict marking, explicit approve/reject/supersede decisions, and preserved history. Confidence prioritizes review only; it never grants authority.
+
+---
+
+## ADR-005 Lean Default Agent Runtime and Deferred External Observability
+
+**Status:** Accepted  
 **Date:** 2026-09-07
 
 ### Context
 
-Raw conversations and tool observations are noisy. Automatically rewriting authoritative Markdown from every Agent turn creates truth drift, loses history, makes conflict resolution opaque, and weakens auditability.
+The v2 template accumulated several defensible but overlapping mechanisms: duplicated operating rules, all-tool PostToolUse logging, full tool-result candidate capture, repeated promotion scanning, lifecycle logs with no consumer, a single-implementation memory-provider abstraction, and policy fields not consumed by runtime code.
 
-Current Agent-memory projects increasingly separate runtime state from durable memory and use later extraction/consolidation steps. The project also needs corrections and changed decisions to preserve historical context instead of deleting old records.
+Current GitHub review also shows mature dedicated observability/evaluation platforms such as Langfuse, Arize Phoenix, OpenLIT, DeepEval, and Promptfoo. These are valuable when an application owns an LLM/Agent runtime, traces model/tool spans, maintains eval datasets, or needs red-team/regression programs. This repository is currently a Claude Code engineering-agent template, not an embedded LLM service.
 
 ### Decision
 
-Adopt a reviewed promotion pipeline:
+Adopt a lean default runtime:
 
-```text
-runtime event
-  -> candidate
-  -> deterministic triage/confidence
-  -> promotion queue
-  -> explicit review decision
-  -> explicit application to curated truth
-```
+- keep only SessionStart, UserPromptSubmit, PreToolUse[Bash], selected PostToolUse, and Stop hooks;
+- capture user candidates only for high-signal correction/decision/task/knowledge prompts;
+- keep tool observations bounded and never persist Write/Edit bodies;
+- do not promote raw tool results into long-term-memory candidates;
+- process new candidates incrementally with a byte cursor instead of rescanning the full candidate log;
+- use a small bounded candidate dedupe cache; ordinary observations do not pay dedupe cost;
+- keep local lexical retrieval tightly bounded and relevance-gated;
+- remove unused provider/lifecycle abstractions until a real second implementation or consumer exists;
+- use deterministic unit/integration tests plus GitHub Actions as the default evaluation layer;
+- keep external observability/evaluation dependencies at zero by default.
 
-Runtime candidates and review decisions are append-oriented audit records. Confidence is used only to prioritize review.
+### Observability Boundary
 
-### Conflict Policy
+When a future project embeds a model/Agent runtime and requires production tracing, first evaluate OpenTelemetry-compatible approaches and mature platforms such as Langfuse, Phoenix, or OpenLIT. When model/prompt behavior requires scored regression, adversarial testing, or datasets, evaluate tools such as DeepEval or Promptfoo at that time.
 
-- A heuristic may mark a `possible` conflict but must not resolve it automatically.
-- Corrections and new decisions with related existing memory require review.
-- Replacements use an explicit `supersedes` relationship.
-- Old historical records are retained rather than silently deleted.
+### Safety Boundary
 
-### Authority Policy
-
-The promotion engine does not directly modify `MEMORY.md`, `TASKS.md`, `LEARNING.md`, `DECISIONS.md`, or `docs/wiki/`.
-
-An approval and its eventual application are separate operations. This separation remains until the workflow is validated with real project use and evaluation data.
+Claude Code officially supports `permissionDecision` values `allow`, `deny`, and `ask`. Catastrophic filesystem/formatting operations are denied; recoverable but destructive Git/database/file operations request confirmation instead of becoming permanently impossible.
 
 ### Consequences
 
-The memory system favors auditability and correctness over maximum automatic recall. It may temporarily miss some low-value memories, but it avoids silently converting weak observations into project truth.
+The default template has fewer hook invocations, smaller context injection, smaller runtime logs, less repeated disk I/O, fewer unused files/config fields, and no platform service dependency. Advanced observability/evaluation remains an explicit future integration rather than baseline overhead.
