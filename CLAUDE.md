@@ -17,7 +17,9 @@ Before implementing a task:
 3. Read `.memory/MEMORY.md`.
 4. Read `.memory/TASKS.md`.
 5. Consult relevant `.memory/DECISIONS.md`, `.memory/LEARNING.md`, `docs/wiki/`, and `docs/ARCHITECTURE.md`.
-6. Prefer existing architecture and components over introducing new patterns.
+6. For structural code discovery, prefer `codebase-memory-mcp` when available.
+7. Verify exact implementation details in current source files before editing.
+8. Prefer existing architecture and components over introducing new patterns.
 
 Do not start coding based purely on assumptions.
 
@@ -41,9 +43,35 @@ Long-term business knowledge: `docs/wiki/`.
 
 Historical technical decisions: `.memory/DECISIONS.md`.
 
+Structural code relationships: `codebase-memory-mcp` when available.
+
 If implementation conflicts with these documents, investigate before changing the architecture.
 
-## 5. Memory Protocol
+## 5. Code Intelligence Protocol
+
+Use information sources according to their responsibility:
+
+- `.memory/MEMORY.md` and `.memory/TASKS.md` — current project state and active work.
+- `.memory/DECISIONS.md` — accepted technical and business decisions.
+- `docs/wiki/` — stable business and domain facts.
+- `docs/ARCHITECTURE.md` — intended architecture and system boundaries.
+- `codebase-memory-mcp` — current structural code graph, symbols, call chains, routes, dependencies, and impact analysis.
+- source files — exact implementation truth.
+
+For unfamiliar or large areas of the repository:
+
+1. Use `codebase-memory-mcp` to discover the relevant structure when available.
+2. Identify symbols, call paths, dependencies, and likely affected modules.
+3. Read the exact source files before making changes.
+4. Use Grep/Glob when precise text search or MCP fallback is needed.
+
+Never treat the code graph as business-policy truth. If MCP results disagree with current source, trust current source and consider the index stale.
+
+MCP failure must not block development. Fall back to standard repository inspection.
+
+See `docs/CODEBASE_MEMORY_MCP.md` and `.claude/rules/code-intelligence.md`.
+
+## 6. Memory Protocol
 
 ### MEMORY.md
 
@@ -65,7 +93,7 @@ Contains accepted technical or business decisions. Update when an important deci
 
 Contains stable project facts. Do not put temporary session information in the wiki.
 
-## 6. Definition of Done
+## 7. Definition of Done
 
 Before declaring a coding task complete:
 
@@ -75,9 +103,10 @@ Before declaring a coding task complete:
 - tests/type checking/lint are run when applicable
 - no unrelated code was modified
 - no credentials or secrets were introduced
+- structural impact was checked for shared or high-risk code when appropriate
 - memory state is updated when appropriate
 
-## 7. Safety
+## 8. Safety
 
 Never:
 
