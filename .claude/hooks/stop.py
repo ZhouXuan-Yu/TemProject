@@ -1,40 +1,24 @@
 #!/usr/bin/env python3
 
 import json
-import os
 import sys
-from datetime import datetime, timezone
-from pathlib import Path
 
-PROJECT_DIR = Path(os.environ.get("CLAUDE_PROJECT_DIR", Path.cwd()))
-RUNTIME_DIR = PROJECT_DIR / ".memory" / "runtime"
+from memory_engine import load_config
 
 
 def main() -> None:
     try:
-        payload = json.load(sys.stdin)
-    except Exception:
-        payload = {}
-
-    try:
-        RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
-        record = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "event": "turn_stop",
-            "session_id": payload.get("session_id"),
-            "stop_hook_active": payload.get("stop_hook_active"),
-        }
-        with (RUNTIME_DIR / "session.jsonl").open("a", encoding="utf-8") as f:
-            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        json.load(sys.stdin)
     except Exception:
         pass
 
-    # Promotion queue generation is a derived, fail-open operation. It never
-    # modifies curated Markdown and must not block normal Claude Code usage.
     try:
-        from promotion_engine import build_review_queue
+        config = load_config()
+        promotion = config.get("promotion") if isinstance(config.get("promotion"), dict) else {}
+        if promotion.get("build_queue_on_stop", True):
+            from promotion_engine import build_review_queue
 
-        build_review_queue(limit=50)
+            build_review_queue(limit=int(promotion.get("batch_size", 25)))
     except Exception:
         pass
 
