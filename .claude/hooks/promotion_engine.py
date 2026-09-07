@@ -1,20 +1,13 @@
 #!/usr/bin/env python3
 
-"""Build a reviewed promotion queue from append-oriented runtime memory events.
-
-Design goals:
-- raw candidates remain non-authoritative
-- queue generation is deterministic and idempotent
-- scoring is triage only, never authority
-- possible conflicts are marked, never auto-resolved
-- curated Markdown is never modified by this module
-"""
+"""Incremental reviewed promotion queue for high-signal memory candidates."""
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 from memory_engine import MEMORY_DIR, RUNTIME_DIR, retrieve, sanitize, utc_now
 
@@ -27,14 +20,14 @@ TARGET_BY_LABEL = {
     "decision": ".memory/DECISIONS.md",
     "task": ".memory/TASKS.md",
     "knowledge": "docs/wiki/",
-    "implementation_observation": ".memory/MEMORY.md",
+    "correction": ".memory/MEMORY.md",
 }
 
 
 def load_config() -> dict[str, Any]:
-    path = MEMORY_DIR / "config.json"
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        value = json.loads((MEMORY_DIR / "config.json").read_text(encoding="utf-8"))
+        return value if isinstance(value, dict) else {}
     except Exception:
         return {}
 
@@ -46,9 +39,6 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     try:
         with path.open("r", encoding="utf-8") as fh:
             for line in fh:
-                line = line.strip()
-                if not line:
-                    continue
                 try:
                     value = json.loads(line)
                 except Exception:
@@ -69,22 +59,60 @@ def _append_jsonl(path: Path, record: dict[str, Any]) -> None:
 def _load_state() -> dict[str, Any]:
     try:
         value = json.loads(STATE_PATH.read_text(encoding="utf-8"))
-        if isinstance(value, dict):
-            value.setdefault("processed", [])
-            return value
+        return value if isinstance(value, dict) else {}
     except Exception:
-        pass
-    return {"processed": []}
+        return {}
 
 
 def _save_state(state: dict[str, Any]) -> None:
     RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
-    processed = state.get("processed", [])
-    if not isinstance(processed, list):
-        processed = []
-    # Bound derived state. Raw candidates remain in their append-oriented log.
-    state["processed"] = processed[-10000:]
     STATE_PATH.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _file_identity(path: Path) -> str:
+    if not path.exists():
+        return ""
+    try:
+        with path.open("rb") as fh:
+            first = fh.read(512)
+        return hashlib.sha256(first).hexdigest()[:16]
+    except Exception:
+        return ""
+
+
+def _new_candidates(state: dict[str, Any]) -> tuple[Iterator[dict[str, Any]], dict[str, Any]]:
+    current_identity = _file_identity(CANDIDATES_PATH)
+    previous_identity = str(state.get("candidate_identity") or "")
+    offset = int(state.get("candidate_offset") or 0)
+
+    try:
+        size = CANDIDATES_PATH.stat().st_size
+    except Exception:
+        size = 0
+
+    if previous_identity != current_identity or offset > size:
+        offset = 0
+
+    progress = {"candidate_identity": current_identity, "candidate_offset": offset}
+
+    def iterator() -> Iterator[dict[str, Any]]:
+        if not CANDIDATES_PATH.exists():
+            return
+        with CANDIDATES_PATH.open("rb") as fh:
+            fh.seek(offset)
+            while True:
+                raw = fh.readline()
+                if not raw:
+                    break
+                progress["candidate_offset"] = fh.tell()
+                try:
+                    value = json.loads(raw.decode("utf-8"))
+                except Exception:
+                    continue
+                if isinstance(value, dict):
+                    yield value
+
+    return iterator(), progress
 
 
 def _labels(candidate: dict[str, Any]) -> list[str]:
@@ -97,8 +125,7 @@ def _labels(candidate: dict[str, Any]) -> list[str]:
 
 
 def proposed_target(labels: list[str]) -> str | None:
-    # Correction is a signal about importance, not a storage destination.
-    for label in ("decision", "knowledge", "task", "implementation_observation"):
+    for label in ("decision", "knowledge", "task", "correction"):
         if label in labels:
             return TARGET_BY_LABEL[label]
     return None
@@ -107,36 +134,23 @@ def proposed_target(labels: list[str]) -> str | None:
 def confidence_score(candidate: dict[str, Any]) -> float:
     labels = set(_labels(candidate))
     source = str(candidate.get("source") or "")
-    text = str(candidate.get("text") or "")
+    text = str(candidate.get("text") or "").lower()
 
     score = 0.20
     if source == "user_prompt":
-        score += 0.25
-    elif source == "tool_result":
-        score += 0.05
-
-    if "correction" in labels:
         score += 0.30
-    if "decision" in labels:
+    if "correction" in labels:
         score += 0.25
-    if "knowledge" in labels:
+    if "decision" in labels:
         score += 0.20
-    if "task" in labels:
+    if "knowledge" in labels:
         score += 0.15
-    if "implementation_observation" in labels:
-        score += 0.05
-
-    explicit_markers = (
-        "确认", "确定", "最终", "记住", "以后", "必须", "采用", "决定",
-        "confirmed", "decided", "must", "source of truth",
-    )
-    if any(marker in text.lower() for marker in explicit_markers):
+    if "task" in labels:
         score += 0.10
 
-    # Long raw tool dumps are less reliable as durable project knowledge.
-    if source == "tool_result" and len(text) > 5000:
-        score -= 0.10
-
+    explicit_markers = ("确认", "确定", "最终", "记住", "以后", "必须", "采用", "决定", "confirmed", "decided", "must")
+    if any(marker in text for marker in explicit_markers):
+        score += 0.10
     return round(max(0.0, min(score, 1.0)), 2)
 
 
@@ -148,89 +162,73 @@ def priority_for(score: float, labels: list[str]) -> str:
     return "low"
 
 
-def possible_conflict(candidate: dict[str, Any], related_context: str) -> str:
-    labels = set(_labels(candidate))
-    if not related_context.strip():
-        return "none_detected"
-    if "correction" in labels:
-        return "possible"
-    if "decision" in labels:
-        return "possible"
-    return "none_detected"
-
-
-def _existing_queue_fingerprints() -> set[str]:
+def _existing_fingerprints(path: Path) -> set[str]:
     return {
         str(row.get("candidate_fingerprint"))
-        for row in _read_jsonl(QUEUE_PATH)
+        for row in _read_jsonl(path)
         if row.get("candidate_fingerprint")
     }
 
 
-def _reviewed_fingerprints() -> set[str]:
-    return {
-        str(row.get("candidate_fingerprint"))
-        for row in _read_jsonl(DECISIONS_PATH)
-        if row.get("candidate_fingerprint")
-    }
-
-
-def build_review_queue(limit: int = 100) -> int:
-    """Derive review items from new candidate events without changing curated truth."""
+def build_review_queue(limit: int | None = None) -> int:
+    """Process only newly appended candidate lines; never edit curated Markdown."""
     config = load_config()
-    promotion_cfg = config.get("promotion") if isinstance(config.get("promotion"), dict) else {}
-    min_score = float(promotion_cfg.get("min_queue_confidence", 0.45))
+    promotion = config.get("promotion") if isinstance(config.get("promotion"), dict) else {}
+    min_score = float(promotion.get("min_queue_confidence", 0.45))
+    limit = int(limit or promotion.get("batch_size", 25))
 
     state = _load_state()
-    processed = set(str(x) for x in state.get("processed", []))
-    already_queued = _existing_queue_fingerprints()
-    already_reviewed = _reviewed_fingerprints()
+    candidates, progress = _new_candidates(state)
+    queued = _existing_fingerprints(QUEUE_PATH)
+    reviewed = _existing_fingerprints(DECISIONS_PATH)
 
     added = 0
-    for candidate in _read_jsonl(CANDIDATES_PATH):
-        if added >= limit:
-            break
-
+    for candidate in candidates:
         fp = str(candidate.get("fingerprint") or "")
-        if not fp or fp in processed or fp in already_queued or fp in already_reviewed:
+        if not fp or fp in queued or fp in reviewed:
             continue
 
         labels = _labels(candidate)
         target = proposed_target(labels)
         score = confidence_score(candidate)
-
-        # Ordinary observations remain runtime-only and do not consume review attention.
         if target is None or score < min_score:
-            processed.add(fp)
             continue
 
         text = sanitize(candidate.get("text") or "")
-        try:
-            related = retrieve(text, limit=3, max_chars=3000)
-        except Exception:
-            related = ""
+        related = ""
+        conflict = "none_detected"
+        if any(label in labels for label in ("correction", "decision", "knowledge")):
+            try:
+                related = retrieve(text, limit=2, max_chars=1800)
+            except Exception:
+                related = ""
+            if related and any(label in labels for label in ("correction", "decision")):
+                conflict = "possible"
 
-        queue_record = {
-            "timestamp": utc_now(),
-            "status": "needs_review",
-            "candidate_fingerprint": fp,
-            "source": candidate.get("source"),
-            "labels": labels,
-            "text": text,
-            "proposed_target": target,
-            "confidence": score,
-            "priority": priority_for(score, labels),
-            "conflict_status": possible_conflict(candidate, related),
-            "related_context": related,
-            "requires_review": True,
-            "meta": candidate.get("meta") or {},
-        }
-        _append_jsonl(QUEUE_PATH, queue_record)
-        processed.add(fp)
-        already_queued.add(fp)
+        _append_jsonl(
+            QUEUE_PATH,
+            {
+                "timestamp": utc_now(),
+                "status": "needs_review",
+                "candidate_fingerprint": fp,
+                "source": candidate.get("source"),
+                "labels": labels,
+                "text": text,
+                "proposed_target": target,
+                "confidence": score,
+                "priority": priority_for(score, labels),
+                "conflict_status": conflict,
+                "related_context": related,
+                "requires_review": True,
+                "meta": candidate.get("meta") or {},
+            },
+        )
+        queued.add(fp)
         added += 1
+        if added >= limit:
+            break
 
-    state["processed"] = sorted(processed)
+    state.update(progress)
     state["last_build_at"] = utc_now()
     _save_state(state)
     return added
@@ -275,12 +273,11 @@ def record_review(
     if not item:
         raise KeyError(f"candidate not found in promotion queue: {candidate_fingerprint}")
 
-    final_target = target or item.get("proposed_target")
     record = {
         "timestamp": utc_now(),
         "candidate_fingerprint": candidate_fingerprint,
         "action": action,
-        "target": final_target,
+        "target": target or item.get("proposed_target"),
         "note": sanitize(note or ""),
         "supersedes": supersedes,
         "applied_to_curated": False,
@@ -295,14 +292,14 @@ def approved_items() -> list[tuple[dict[str, Any], dict[str, Any]]]:
         for row in _read_jsonl(QUEUE_PATH)
         if row.get("candidate_fingerprint")
     }
-    latest_decisions: dict[str, dict[str, Any]] = {}
+    latest: dict[str, dict[str, Any]] = {}
     for row in _read_jsonl(DECISIONS_PATH):
         fp = str(row.get("candidate_fingerprint") or "")
         if fp:
-            latest_decisions[fp] = row
+            latest[fp] = row
 
     result: list[tuple[dict[str, Any], dict[str, Any]]] = []
-    for fp, decision in latest_decisions.items():
+    for fp, decision in latest.items():
         if decision.get("action") not in {"approve", "supersede"}:
             continue
         item = queue.get(fp)
