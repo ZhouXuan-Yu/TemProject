@@ -2,7 +2,7 @@
 
 ## Current Task
 
-Validate Claude Code agent infrastructure and prepare semantic-memory integration.
+Validate Claude Code agent infrastructure and codebase-memory-mcp integration.
 
 ### Acceptance Criteria
 
@@ -19,29 +19,38 @@ Validate Claude Code agent infrastructure and prepare semantic-memory integratio
 - [x] Runtime deduplication implemented
 - [x] Runtime rotation/archive implemented
 - [x] Memory provider abstraction implemented
+- [x] `codebase-memory-mcp` identified
+- [x] Project-level `.mcp.json` created
+- [x] Code-intelligence rules added
+- [x] MCP integration documentation added
+- [x] `.codebase-memory/` ignored by Git
+- [ ] Verify MCP connection with `/mcp` in a real local Claude Code session
+- [ ] Verify repository indexing and structural queries
 - [ ] Verify hook execution in a real local Claude Code session
 - [ ] Verify destructive-operation blocking in a real local session
 - [ ] Verify MEMORY/TASKS context injection
 - [ ] Verify relevant-memory retrieval on UserPromptSubmit
-- [ ] Connect the intended external semantic-memory provider
 
 ## P0
 
-- [ ] Clone/pull the repository locally and run Claude Code
+- [ ] Pull the repository locally
+- [ ] Install `codebase-memory-mcp` and expose it on PATH
+- [ ] Start Claude Code and verify `codebase-memory-mcp` via `/mcp`
+- [ ] Index the repository and run structural discovery queries
 - [ ] Validate all Hook event payloads against the installed Claude Code version
 - [ ] Validate security guard behavior with safe test commands
 - [ ] Confirm runtime files are generated under `.memory/runtime/`
 
 ## P1
 
-- [ ] Identify the exact external memory project/provider to integrate
-- [ ] Implement semantic provider adapter
-- [ ] Add semantic retrieval fallback/health checks
 - [ ] Add reviewed promotion workflow from candidates to curated Markdown
+- [ ] Add superseded-decision handling
+- [ ] Decide whether to use the MCP project's optional Grep/Glob augmentation hook after local validation
+- [ ] Add MCP health/fallback observability if needed
 
 ## P2
 
 - [ ] Add memory confidence scoring
-- [ ] Add stale-memory/superseded-decision handling
+- [ ] Add stale-memory handling
 - [ ] Add candidate review tooling
 - [ ] Add observability metrics for retrieval hit rate and memory growth
