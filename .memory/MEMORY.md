@@ -1,86 +1,54 @@
 # Project Memory
 
-> Current project state only. Do not use this file as a chronological diary.
+> Current state only; not a chronological diary.
 
 ## Project Phase
 
-Claude Code agent infrastructure v2: research-first architecture + reviewed memory promotion + codebase intelligence.
+Claude Code Agent infrastructure v3 — lean final candidate for local acceptance.
 
 ## Current Objective
 
-Validate the complete Hook/MCP/Promotion lifecycle in a real local Claude Code session, then move to Agent observability/evaluation after another current GitHub ecosystem review.
+Run the final v3 locally inside Claude Code, verify Hook payloads and `codebase-memory-mcp`, then use this repository as the reusable project baseline.
 
 ## Completed
 
-- Project memory architecture defined.
-- CLAUDE.md initialized with code-intelligence and Research-First protocols.
-- Project rule files created.
-- `.claude/rules/research-first.md` enforces current GitHub/official research before material Agent-platform changes.
-- `docs/AGENT_RESEARCH.md` records the initial Agent ecosystem research ledger and adoption rationale.
-- Claude Code Hook configuration created.
-- SessionStart loads current project state and active tasks.
-- UserPromptSubmit classifies prompts and performs local curated-memory retrieval.
-- PreToolUse contains destructive-command protection.
-- PostToolUse records bounded, sanitized observations.
-- Runtime candidate-memory capture implemented.
-- Runtime deduplication implemented.
-- Runtime file rotation/archive implemented.
-- Secret/token redaction implemented.
-- Memory provider abstraction implemented with local fallback.
-- Memory engine policy upgraded to v2.
-- Reviewed Promotion Engine implemented in `.claude/hooks/promotion_engine.py`.
-- Promotion confidence/priority scoring implemented as triage only.
-- Possible conflict marking implemented without automatic conflict resolution.
-- Append-oriented promotion review audit implemented.
-- Explicit supersession links implemented; old history is not silently deleted.
-- `.claude/hooks/memoryctl.py` provides build/queue/approve/reject/supersede/export review commands.
-- Stop Hook derives promotion queue entries in fail-open mode without modifying curated truth.
-- Standard-library promotion smoke tests added under `tests/agent/test_promotion_engine.py`.
-- `codebase-memory-mcp` identified as the structural code-intelligence MCP.
-- Project-level `.mcp.json` created using the `codebase-memory-mcp` executable from PATH.
-- `.claude/rules/code-intelligence.md` created.
-- `docs/CODEBASE_MEMORY_MCP.md` created.
-- Local `.codebase-memory/` indexes are ignored by Git.
-- ADR-002 records code-intelligence boundaries.
-- ADR-003 records research-first Agent engineering.
-- ADR-004 records reviewed append-oriented memory promotion.
-
-## In Progress
-
-- Local Claude Code runtime validation
-- Local installation/availability of `codebase-memory-mcp`
-- Code graph indexing validation
-- Local execution of the new promotion-engine smoke tests
-- Validation of review queue thresholds against real project usage
+- Research-first Agent engineering and GitHub research ledger.
+- Compact `CLAUDE.md` with detailed rules delegated to `.claude/rules/`.
+- Optional `codebase-memory-mcp` structural intelligence; current source remains implementation truth.
+- Bounded SessionStart current-state injection.
+- High-signal-only user memory candidate capture.
+- Bounded lexical retrieval: 2 results / 2500 chars / relevance floor.
+- Tiered Bash safety guard: catastrophic actions deny; recoverable high-risk actions ask for confirmation.
+- PostToolUse restricted to state-changing tool classes and no longer stores Write/Edit bodies.
+- Tool results no longer become long-term-memory candidates.
+- Reviewed memory promotion with confidence/priority, possible-conflict marking, explicit review, and supersession history.
+- Promotion queue changed from repeated full candidate scans to an incremental byte cursor.
+- Candidate dedupe cache reduced and removed from ordinary tool observations.
+- Unused `memory_provider.py`, PreCompact runtime logging, and SessionEnd runtime logging removed from the final design.
+- Memory/runtime config reduced to settings that are actually used.
+- On-demand `memoryctl.py doctor` added; no external observability service is required by default.
+- GitHub Actions regression workflow added with Python compile + unit tests.
+- Final isolated regression suite: 10 tests passed on 2026-09-07.
 
 ## Current Blockers
 
-- Runtime verification requires the local development machine to have the `codebase-memory-mcp` executable installed and available on PATH.
-- Hook behavior still needs to be validated against the locally installed Claude Code version.
-- The current isolated automation environment cannot reach github.com by DNS, so repository tests could not be executed there after push; the test suite is committed for local execution instead.
+- Local Claude Code Hook behavior still needs verification against the user's installed Claude Code version.
+- `codebase-memory-mcp` must be installed and available on PATH for structural-intelligence tests; its absence does not block normal development.
+- GitHub Actions workflow is configured but its first remote run must occur after the final push.
 
-## Recently Confirmed
+## Confirmed Boundaries
 
-- Material Agent architecture changes must first review current GitHub/official solutions and record adoption rationale.
-- Context, runtime state, durable project memory, structural code intelligence, and exact source code have separate responsibilities.
-- `codebase-memory-mcp` is used for structural code discovery, call chains, routes, dependencies, and impact analysis.
-- Curated Markdown remains the source of truth for project state, decisions, lessons, and business/domain knowledge.
-- Current source files remain the final source of truth for exact implementation.
-- MCP failure must not block normal development.
-- Runtime observations and candidates are not authoritative memory.
-- Promotion confidence is a review-priority signal, not authority.
-- Curated Markdown must not be silently rewritten from raw tool observations.
-- Corrections/conflicting decisions are reviewed and linked through supersession rather than destructive overwrite.
+- Source files = exact implementation truth.
+- Curated Markdown = reviewed project/domain truth.
+- Runtime logs/candidates = bounded evidence, never authority.
+- `codebase-memory-mcp` = optional structural accelerator, never authority.
+- External tracing/eval platforms are deferred until the project contains an actual embedded model/Agent runtime that benefits from them.
 
 ## Next
 
-1. Pull the repository locally.
-2. Run `python -m unittest discover -s tests/agent -p "test_*.py"`.
-3. Run `python .claude/hooks/memoryctl.py build` and `python .claude/hooks/memoryctl.py queue`.
-4. Install `codebase-memory-mcp` and ensure the executable is available on PATH.
-5. Start Claude Code inside the repository and run `/mcp`.
-6. Confirm `codebase-memory-mcp` is connected and exposes its code-intelligence tools.
-7. Index the repository and test structural queries.
-8. Validate SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, PreCompact, Stop and SessionEnd payloads.
-9. Confirm `.memory/runtime/` queue/audit files are generated and ignored by Git.
-10. Research current Agent observability/evaluation approaches on GitHub before designing the next platform layer.
+1. `git pull`
+2. `python -m unittest discover -s tests/agent -p "test_*.py"`
+3. `python .claude/hooks/memoryctl.py doctor`
+4. Start Claude Code in the repository and verify hooks with safe test operations.
+5. Run `/mcp`, verify `codebase-memory-mcp`, index the repository, and test structural queries.
+6. Use the template in real project work; only add external observability/evaluation after real runtime needs appear.
