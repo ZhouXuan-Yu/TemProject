@@ -27,7 +27,7 @@ Re-verify
   └─────────────── loop
 ```
 
-The deterministic Stop gate reads bounded runtime observations for the current session.
+The deterministic Stop gate reads bounded runtime observations for the current session. Successful state-changing tools are captured through `PostToolUse`; non-zero Bash failures are captured separately through `PostToolUseFailure`, so a failed verification becomes explicit repair-loop evidence instead of being guessed from output text.
 
 It blocks stopping when:
 
