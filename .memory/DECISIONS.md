@@ -75,3 +75,38 @@ Claude Code officially supports `permissionDecision` values `allow`, `deny`, and
 ### Consequences
 
 The default template has fewer hook invocations, smaller context injection, smaller runtime logs, less repeated disk I/O, fewer unused files/config fields, and no platform service dependency. Advanced observability/evaluation remains an explicit future integration rather than baseline overhead.
+
+---
+
+## ADR-006 Execution-First Autonomous Completion
+
+**Status:** Accepted  
+**Date:** 2026-09-21
+
+### Context
+
+Real usage showed that the v3 template improved context, memory governance, and safety but did not materially improve autonomous task completion. The Stop hook only built memory promotion queues; it did not prevent Claude from returning a final answer after writing code without verification or before the user's requested outcome was actually complete.
+
+Current upstream patterns converge on an execution loop rather than a memory-first loop: Claude Code's Stop hooks are explicitly designed to validate completeness and may block stopping; Claude Code also provides session-level `/goal` for multi-turn completion conditions. SWE-agent and Ralph/Ralphy-style coding agents make implementation, verification, failure feedback, retry, and submission/completion explicit stages.
+
+### Decision
+
+Make execution completion the primary runtime concern:
+
+- define the default lifecycle as Understand → Plan → Execute → Verify → Repair → Re-verify → Finish;
+- use the command Stop hook as a deterministic verification gate;
+- when code files changed, require a recognized test/build/lint/typecheck/smoke check after the latest meaningful edit;
+- if the latest recognized verification failed, block stopping and instruct the agent to repair and re-run it;
+- add a semantic Stop prompt gate that compares the work against the original user request and blocks premature completion;
+- treat documentation-only edits as exempt from code-test requirements;
+- allow genuine external blockers to terminate with an explicit unverified/blocker report instead of looping indefinitely.
+
+### Autonomy Boundary
+
+The built-in Stop loop is an inner repair/acceptance loop, not a general-purpose scheduler.
+
+For stronger explicit session autonomy, use Claude Code's native `/goal <condition>` with objective, bounded conditions. For long AFK PRD/task-list execution, retries across many stories, isolated worktrees, or parallel agents, prefer a dedicated outer orchestrator such as Ralphy/Ralph rather than rebuilding that scheduler inside project hooks.
+
+### Consequences
+
+The template now converts "verification missing" and "verification failed" into continued agent work rather than a premature final response. Memory remains supportive infrastructure instead of the center of the runtime. Completion quality should become directly observable in day-to-day use.
