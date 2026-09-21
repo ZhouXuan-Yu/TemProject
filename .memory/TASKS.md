@@ -22,7 +22,7 @@ Real use of v3 showed that memory/context/safety improvements were not enough: C
 - [x] `docs/AUTONOMOUS_EXECUTION.md` added.
 - [x] ADR-006 records execution-first autonomy.
 - [x] Completion-gate tests added.
-- [ ] GitHub Actions passes on the v4 commits.
+- [x] GitHub Actions passes on the v4 completion-gate commits, including failed-Bash evidence capture.
 - [ ] Pull v4 locally.
 - [ ] Confirm an implementation task automatically continues when no verification was run.
 - [ ] Confirm a failing test causes repair/re-test rather than a final answer.
