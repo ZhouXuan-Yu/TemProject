@@ -47,7 +47,7 @@ A genuine external blocker may end the loop, but the final response must identif
 
 - v4 implementation committed to GitHub.
 - New completion-gate regression tests committed.
-- Remote GitHub Actions result for the v4 changes still needs confirmation.
+- Remote GitHub Actions passes for the v4 completion gate, semantic Stop configuration, and failed-Bash evidence capture.
 - Real local Claude Code behavior still needs user acceptance testing.
 
 ## Next
