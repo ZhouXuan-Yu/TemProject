@@ -2,13 +2,13 @@
 
 > 面向大型商业项目的轻量 Claude Code / Coding Agent 工程模板。
 >
-> 目标不是把 Agent 基础设施做得越复杂越好，而是在 **可持续上下文、长期项目记忆、代码结构理解、安全约束、可审计演进和低运行开销** 之间取得平衡。
+> 目标不是把 Agent 基础设施做得越复杂越好，而是让 Claude Code 形成真正可感知的 **执行 → 验证 → 修复 → 再验证 → 完成** 闭环，同时保留可持续上下文、长期项目记忆、代码结构理解、安全约束和低运行开销。
 
 [![Agent Infrastructure](https://github.com/ZhouXuan-Yu/TemProject/actions/workflows/agent-infra.yml/badge.svg)](https://github.com/ZhouXuan-Yu/TemProject/actions/workflows/agent-infra.yml)
 
 ## 项目定位
 
-TemProject 用于承载需要长期使用 Claude Code 开发的大型项目。它解决的不是“让 Agent 记住所有聊天”，而是让 Agent 在跨会话、跨阶段、多人协作和大型代码库中，持续知道：
+TemProject 用于承载需要长期使用 Claude Code 开发的大型项目。v4 的核心不再是“让 Agent 记住更多”，而是让 Agent **不要在任务尚未验收时停下来**，并在跨会话、跨阶段、多人协作和大型代码库中持续知道：
 
 - 当前项目做到哪里；
 - 当前最重要的任务是什么；
@@ -16,9 +16,11 @@ TemProject 用于承载需要长期使用 Claude Code 开发的大型项目。�
 - 哪些经验经过验证，可以复用；
 - 哪些只是本次会话产生的运行证据；
 - 当前代码真实结构是什么；
-- 哪些危险操作必须阻止或请求人工确认。
+- 哪些危险操作必须阻止或请求人工确认；
+- 当前任务是否真的完成、验证是否发生在最后一次代码修改之后；
+- 验证失败后下一轮应该修什么，而不是直接返回“已完成”。
 
-最终原则是：**源码负责实现真相，Curated Memory 负责项目真相，Runtime 只负责证据，MCP 负责加速理解，而不是替代源码。**
+最终原则是：**Execution Loop 负责把任务做完；源码负责实现真相；Curated Memory 负责项目真相；Runtime 只负责证据；MCP 负责加速理解。Memory 是辅助，不再是运行时中心。**
 
 ---
 
@@ -42,8 +44,12 @@ Claude Code
   ├─ PostToolUse[state-changing tools]
   │    └─ 记录有限运行证据，不保存完整编辑正文
   │
-  ├─ Stop
-  │    └─ 增量构建 Memory Promotion Queue
+  ├─ Stop(command)
+  │    ├─ 增量构建 Memory Promotion Queue
+  │    └─ 检查最后一次代码修改后是否有验证、验证是否通过
+  │
+  ├─ Stop(prompt)
+  │    └─ 对照用户原始需求做语义验收；未完成则 block 并继续
   │
   └─ codebase-memory-mcp（可选）
        └─ 代码符号 / 调用链 / 路由 / 依赖 / 影响分析
@@ -69,6 +75,44 @@ Runtime Evidence（不提交 Git）
 ---
 
 ## 为什么这样设计
+
+### 0. Execution-first：不是“写完代码”，而是“通过验收”
+
+v3 实际使用反馈暴露了一个核心问题：Memory、MCP、Hook 和规则都存在，但 Claude 仍然可以在“已经修改文件、还没有验证”时直接结束，所以用户很难感受到生产力提升。
+
+v4 把主链改成：
+
+```text
+Understand
+  ↓
+Plan
+  ↓
+Execute
+  ↓
+Verify
+  ↓
+失败？ ── yes ──> Repair ──> Re-verify
+  │
+  no
+  ↓
+Semantic Acceptance
+  ↓
+完成？ ── no ──> Continue
+  │
+  yes
+  ↓
+Finish
+```
+
+Stop 阶段现在有两层 Gate：
+
+1. **Deterministic Gate**：代码发生修改后，最后一次有效代码修改之后必须出现相关 test/build/lint/typecheck/smoke 验证；验证失败就阻止结束。
+2. **Semantic Gate**：即使测试通过，也要检查用户原始请求中的交付内容是否真的完成。
+
+Claude Code 官方当前也把 Stop Hook 用于 completeness validation，并提供原生 `/goal <condition>` 在多个 turn 间持续工作直到目标满足。更长时间的 PRD/多任务/并行 worktree 则更适合 Ralph/Ralphy 这类 outer orchestrator。
+
+详细说明见 [`docs/AUTONOMOUS_EXECUTION.md`](docs/AUTONOMOUS_EXECUTION.md)。
+
 
 ### 1. Context Engineering，而不是无限堆上下文
 
@@ -136,6 +180,8 @@ TemProject 不允许 Hook 根据一次对话自动重写 `MEMORY.md`、`DECISION
 - [OpenHands/OpenHands](https://github.com/OpenHands/OpenHands)
 - [OpenHands/software-agent-sdk](https://github.com/OpenHands/software-agent-sdk)
 - [SWE-agent/SWE-agent](https://github.com/SWE-agent/SWE-agent)
+- [michaelshimeles/ralphy](https://github.com/michaelshimeles/ralphy)
+- [allierays/agentic-loop](https://github.com/allierays/agentic-loop)
 
 ### 6. Observability / Eval 保持可插拔，而不是默认变重
 
@@ -217,7 +263,7 @@ TemProject/
 
 ## Memory 策略
 
-TemProject v3 默认配置刻意保持小而快：
+TemProject v4 仍然保持 v3 的小而快 Memory 设计，但 Memory 现在明确属于 Execution Loop 的辅助层：
 
 ```json
 {
@@ -329,6 +375,32 @@ claude
 
 确认 `codebase-memory-mcp` 已连接，然后就可以开始实际项目开发。
 
+### 5. 测试自动完成闭环
+
+给 Claude 一个真实的小型代码修改任务。不要主动提醒它跑测试。
+
+预期行为：
+
+```text
+Claude 修改代码
+→ 尝试结束
+→ Stop Gate 发现没有验证
+→ 自动继续
+→ 执行相关 test/build/lint/typecheck
+→ 如果失败，修复
+→ 再验证
+→ 语义验收
+→ 最终返回
+```
+
+对于更明确的多轮目标，可使用 Claude Code 当前原生能力：
+
+```text
+/goal 修复登录问题，原始复现不再出现，相关测试通过，并且用户要求的行为全部完成
+```
+
+避免使用“做到完美”之类主观目标。
+
 ---
 
 ## Memory Review CLI
@@ -400,16 +472,20 @@ Agent infrastructure tests
 
 TemProject 当前主要跟随以下趋势：
 
-1. **Context Engineering > 无限聊天历史**：显式控制进入模型的状态、知识和工具上下文。
-2. **Runtime State 与 Durable Memory 分层**：短期执行状态不等于长期知识。
-3. **Memory Consolidation / Promotion**：先采集，再筛选和审核，而不是每轮自动重写长期记忆。
-4. **Append / Supersede > Destructive Rewrite**：长期项目更重视审计和历史演进。
-5. **MCP / Tooling 可插拔**：代码图谱、检索和外部服务不能成为单点依赖。
-6. **Coding Agent + Workspace / Execution Boundary**：Agent 推理、代码执行和环境能力职责分离。
-7. **Narrow Hooks + Deterministic Guardrails**：Hook 做明确、可测试的事情，不演变成第二套应用平台。
-8. **OTel-compatible Observability**：真正进入 Agent Runtime/生产调用后，再接专业 tracing/eval 系统。
-9. **Evaluation as CI**：能够确定性验证的基础设施优先使用自动测试和 CI，而不是所有问题都调用另一个 LLM 判断。
-10. **Research-First Evolution**：生态变化快，基础架构决策优先以当前 upstream/官方实现为依据。
+1. **Execution Loop > Memory-first**：真正的价值来自实现、验证、修复、再验证和可判定完成；Memory 负责辅助连续性。
+2. **Verification as Gate**：代码改动后没有验证，或者验证失败时，不允许直接声明完成。
+3. **Semantic + Deterministic Acceptance**：测试证明机器可验证部分，Stop verifier 对照原始需求检查交付完整性。
+4. **Inner Loop + Outer Orchestrator 分层**：Stop/`/goal` 负责 session 内闭环，Ralph/Ralphy 类工具负责长时间 PRD、多任务、并行 worktree。
+5. **Context Engineering > 无限聊天历史**：显式控制进入模型的状态、知识和工具上下文。
+6. **Runtime State 与 Durable Memory 分层**：短期执行状态不等于长期知识。
+7. **Memory Consolidation / Promotion**：先采集，再筛选和审核，而不是每轮自动重写长期记忆。
+8. **Append / Supersede > Destructive Rewrite**：长期项目更重视审计和历史演进。
+9. **MCP / Tooling 可插拔**：代码图谱、检索和外部服务不能成为单点依赖。
+10. **Coding Agent + Workspace / Execution Boundary**：Agent 推理、代码执行和环境能力职责分离。
+11. **Narrow Hooks + Deterministic Guardrails**：Hook 做明确、可测试的事情，不演变成第二套应用平台。
+12. **OTel-compatible Observability**：真正进入 Agent Runtime/生产调用后，再接专业 tracing/eval 系统。
+13. **Evaluation as CI**：能够确定性验证的基础设施优先使用自动测试和 CI，而不是所有问题都调用另一个 LLM 判断。
+14. **Research-First Evolution**：生态变化快，基础架构决策优先以当前 upstream/官方实现为依据。
 
 ---
 
@@ -446,7 +522,7 @@ TemProject 当前主要跟随以下趋势：
 
 ## 当前状态
 
-Agent Infrastructure v3 已完成减重和回归验证。默认策略是：**先使用、先观察真实项目问题，不再为了“看起来完整”继续增加 Agent 基础设施。**
+Agent Infrastructure v4 已根据真实使用反馈从 Memory-first 调整为 **Execution-first**。当前重点不是继续增加基础设施，而是验证自动完成闭环是否真的改善日常开发：未验证不能结束、失败自动修复、通过后再做语义验收。
 
 后续任何重要升级继续遵循：
 
