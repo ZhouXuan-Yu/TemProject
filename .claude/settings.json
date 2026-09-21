@@ -53,6 +53,10 @@
             "type": "command",
             "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/stop.py\"",
             "timeout": 3
+          },
+          {
+            "type": "prompt",
+            "prompt": "You are the semantic completion gate for a production coding agent. Inspect the user's actual request and the work completed in this turn/session. Return approve only when the requested outcome is materially complete. For implementation, fix, refactor, configuration, deployment, or file-changing tasks, require: (1) all requested deliverables are addressed, (2) no known failing verification remains, (3) relevant verification evidence exists after the latest meaningful code change, and (4) there is no obvious unfinished placeholder/TODO standing in for the requested result. If more agent work can reasonably improve the result, return block with one concise, actionable reason describing exactly what to do next. For purely informational questions with no requested repository change, approve when the answer addresses the question. If progress is genuinely blocked by credentials, unavailable external systems, missing user-only information, or another condition the agent cannot resolve, approve so the final response can clearly report the blocker and what remains unverified. Do not block merely to seek perfection or subjective polish."
           }
         ]
       }
