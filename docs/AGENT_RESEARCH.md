@@ -88,3 +88,46 @@ For foundational Agent changes, check current official documentation and active 
 ### Deferred trigger
 
 Revisit production tracing/evaluation only when a concrete project embeds its own model/Agent runtime, has real trace/eval requirements, or accumulated failure cases that deterministic infrastructure tests cannot cover.
+
+
+---
+
+## 2026-09-21 — Autonomous Completion Loops and Acceptance Gates
+
+### User feedback that triggered the review
+
+Real project use showed that the v3 template did not materially improve autonomous completion. It improved memory, context boundaries, safety, and auditability, but Claude could still stop after writing code without completing a verify/repair cycle. The architecture was memory-first when the day-to-day value needed to be execution-first.
+
+### Current upstream/GitHub patterns reviewed
+
+- `anthropics/claude-code` — current Hook guidance explicitly presents Stop as a completeness validator that may return `block` with a reason so Claude continues. Claude Code also now exposes native `/goal <condition>`, a session-level self-verification loop that checks a completion condition after each turn and continues without a new user prompt when unmet.
+- `SWE-agent/SWE-agent` — autonomous issue solving is structured around reproduce/inspect/edit/test/retry/submit behavior; failed edits/tests feed directly back into another attempt instead of becoming a final answer.
+- `michaelshimeles/ralphy` — active autonomous coding loop supporting Claude Code and other CLIs, explicit project test/lint/build commands, retries, PRD/task sources, worktrees, parallel execution, browser verification, and max-iteration/retry controls.
+- `allierays/agentic-loop` — separates planning/PRD validation from execution; each story flows through implementation and code-check stages, with failed checks persisted as feedback for retry.
+- Ralph-style loops generally — task state and acceptance are externalized, iterations are bounded, and completion is a state transition rather than a conversational claim.
+
+### Mainstream direction observed
+
+1. **Execution loop is the primary value surface.** Memory improves continuity, but users feel productivity when the agent keeps working through failures until an objective acceptance condition is reached.
+2. **Verification is a gate, not a suggestion.** Tests/build/lint/typecheck/smoke checks belong after implementation and before completion.
+3. **Failure output must become next-iteration input.** A failed check should trigger repair and re-verification, not a final response explaining that tests failed while the agent could still act.
+4. **Semantic and deterministic acceptance complement each other.** Machine checks can prove some properties; the original user request still needs a semantic completeness review.
+5. **Inner and outer loops are different.** Stop hooks or native `/goal` work well for a bounded session repair loop. Long AFK PRD/task scheduling, parallel worktrees, multi-process retries and auto-PR flows belong in an outer orchestrator.
+6. **Completion conditions must be objective and bounded.** Subjective goals create token-burning loops. External blockers should terminate with explicit evidence and escalation.
+
+### Adopted for TemProject v4
+
+- Reframe the architecture from Memory-first to Execution-first.
+- Add deterministic Stop-time acceptance: code edits require recognized verification after the latest meaningful edit.
+- Failed latest verification blocks completion and feeds a repair instruction back to Claude.
+- Add a semantic Stop prompt gate that compares work against the user's actual requested outcome.
+- Add an explicit execution lifecycle: Understand → Plan → Execute → Verify → Repair → Re-verify → Finish.
+- Keep documentation-only edits outside the code-test requirement.
+- Document native Claude Code `/goal` as the stronger opt-in session loop.
+- Do not reimplement Ralphy/Ralph-style long-running scheduling in project hooks; keep it an optional outer layer for PRDs, parallelism, worktrees and AFK operation.
+
+### Important limits
+
+- Native `/goal` is currently session-scoped and user-invoked; the model cannot generally set its own native goal.
+- Stop-hook loops are completion gates, not a replacement for a dedicated long-running scheduler.
+- A loop must stop on genuine external blockers rather than repeatedly asking the model to solve an impossible condition.
